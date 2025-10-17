@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧卡片</title>
+    <title>小美的每日名言</title>
     <style>
         * {
             margin: 0;
@@ -106,11 +106,15 @@
             letter-spacing: 2px;
             z-index: 5;
         }
+        .title small {
+            font-size: 0.8rem;
+            color: #c5b3a5;
+        }
     </style>
 </head>
 <body>
     <div id="container">
-        <div class="title">轻触卡片，发现智慧</div>
+        <div class="title">小美，点击卡片开启美好的一天<br><small>正在加载时间...</small></div>
         <div class="quote-container">
             <button class="close-btn">×</button>
             <p class="quote"></p>
@@ -119,6 +123,15 @@
     </div>
 
     <script>
+        // 实时时间更新
+        function updateTime() {
+            const now = new Date();
+            const timeString = `${now.getFullYear()}年${(now.getMonth()+1).toString().padStart(2,'0')}月${now.getDate().toString().padStart(2,'0')}日 ${now.getHours().toString().padStart(2,'0')}时${now.getMinutes().toString().padStart(2,'0')}分${now.getSeconds().toString().padStart(2,'0')}秒`;
+            document.querySelector('.title').innerHTML = `小美，点击卡片开启美好的一天<br><small>${timeString}</small>`;
+        }
+        setInterval(updateTime, 1000);
+        updateTime(); // 立即执行一次
+
         // 卡片颜色 - 莫兰迪色系
         const cardColors = [
             'linear-gradient(135deg, #e8d8c9 0%, #d1bfb0 100%)',
@@ -133,134 +146,73 @@
             .then(response => response.json())
             .then(data => {
                 quotes = data;
-                // 初始化卡片（确保数据加载后再创建）
                 init();
             })
             .catch(error => {
-                console.error('加载名言数据失败:', error);
-                // 使用默认数据作为后备
-                quotes = [
-                    {quote: "数据加载失败，请刷新重试", author: "系统提示"}
-                ];
+                console.error('加载失败:', error);
+                quotes = [{quote: "数据加载失败，请刷新重试", author: "系统提示"}];
                 init();
             });
-        
+
         // 创建卡片
         function createCard() {
             const card = document.createElement('div');
             card.className = 'card';
+            card.style.background = cardColors[Math.floor(Math.random() * cardColors.length)];
+            card.textContent = ['❀', '✿', '❁', '✽', '❃'][Math.floor(Math.random() * 5)];
             
-            // 随机选择颜色
-            const color = cardColors[Math.floor(Math.random() * cardColors.length)];
-            card.style.background = color;
-            
-            // 随机卡片符号
-            const symbols = ['❀', '✿', '❁', '✽', '❃'];
-            card.textContent = symbols[Math.floor(Math.random() * symbols.length)];
-            
-            // 初始位置集中在中央区域
             const centerX = window.innerWidth/2 - 50;
-            const startX = centerX + (Math.random() - 0.5) * 80;
-            card.style.left = `${startX}px`;
+            card.style.left = `${centerX + (Math.random() - 0.5) * 80}px`;
             card.style.top = '-120px';
             
             document.getElementById('container').appendChild(card);
-            
-            // 添加动画
             animateCard(card);
             
-            // 点击事件
             card.addEventListener('click', function() {
-                showRandomQuote();
-                removeCard(card);
+                const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                document.querySelector('.quote').textContent = randomQuote.quote;
+                document.querySelector('.author').textContent = randomQuote.author;
+                document.querySelector('.quote-container').classList.add('active');
+                
+                card.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                card.style.transform = 'scale(0.1) rotate(180deg)';
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.remove();
+                    createCard();
+                }, 800);
             });
         }
-        
-        // 卡片动画 (优化中央区域轨迹)
+
+        // 卡片动画
         function animateCard(card) {
-            const duration = 15 + Math.random() * 5; // 更慢的下落速度
+            const duration = 15 + Math.random() * 5;
             const centerX = window.innerWidth/2 - parseFloat(card.style.width)/2;
-            
             let startTime = null;
-            const startY = -120;
-            const endY = window.innerHeight + 100;
             
             function animate(currentTime) {
                 if (!startTime) startTime = currentTime;
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / (duration * 1000), 1);
+                const progress = Math.min((currentTime - startTime) / (duration * 1000), 1);
                 
-                // 垂直下落
-                const y = startY + (endY - startY) * progress;
+                card.style.top = `${-120 + (window.innerHeight + 100 + 120) * progress}px`;
+                card.style.left = `${centerX + Math.sin(progress * Math.PI * 3) * 15}px`;
+                card.style.transform = `rotate(${Math.sin(progress * Math.PI) * 5}deg)`;
                 
-                // 水平位置保持在中央区域 (轻微自然摆动)
-                const sway = Math.sin(progress * Math.PI * 3) * 15;
-                const x = centerX + sway;
-                
-                // 微旋转 (5度以内)
-                const rotation = Math.sin(progress * Math.PI) * 5;
-                
-                card.style.top = `${y}px`;
-                card.style.left = `${x}px`;
-                card.style.transform = `rotate(${rotation}deg)`;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
+                if (progress < 1) requestAnimationFrame(animate);
+                else {
                     card.remove();
                     createCard();
                 }
             }
-            
             requestAnimationFrame(animate);
         }
-        
-        // 移除卡片时的动画
-        function removeCard(card) {
-            card.style.transition = 'all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            card.style.transform = 'scale(0.1) rotate(180deg)';
-            card.style.opacity = '0';
-            
-            setTimeout(() => {
-                if (card.parentNode) {
-                    card.remove();
-                    createCard();
-                }
-            }, 800);
-        }
-        
-        // 显示随机名言
-        function showRandomQuote() {
-            const randomIndex = Math.floor(Math.random() * quotes.length);
-            const randomQuote = quotes[randomIndex];
-            
-            const quoteContainer = document.querySelector('.quote-container');
-            const quoteElement = document.querySelector('.quote');
-            const authorElement = document.querySelector('.author');
-            
-            quoteElement.textContent = randomQuote.quote;
-            authorElement.textContent = randomQuote.author;
-            
-            quoteContainer.classList.add('active');
-        }
-        
-        // 关闭名言
-        document.querySelector('.close-btn').addEventListener('click', function() {
-            document.querySelector('.quote-container').classList.remove('active');
-        });
-        
+
         // 初始化
         function init() {
-            // 创建初始卡片 (数量减少但间距增大)
             for (let i = 0; i < 6; i++) {
-                setTimeout(() => {
-                    createCard();
-                }, i * 1200);
+                setTimeout(createCard, i * 1200);
             }
         }
-        
-        // 启动改为在数据加载后执行
-        // window.onload = init; (已移至fetch回调中)
     </script>
 </body>
 </html>
